@@ -1,0 +1,8 @@
+name: astrbot_plugin_desktop_pilot
+display_name: 桌面领航员
+short_desc: 让 bot 看屏幕、点按钮、打字，自动处理高分屏缩放，坐标不再点歪。
+desc: 让大模型通过截图操控 Windows 桌面。给可交互元素画框编号，模型按编号点击；需要坐标时由插件自动换算缩放和 DPI，支持千分比坐标、放大镜精确定位和多显示器。思路参考 Windows-MCP。
+version: v1.0.0
+author: yun474
+repo: https://github.com/yun474/astrbot_plugin_desktop_pilot
+astrbot_version: ">=4.28.1"

@@ -1,0 +1,89 @@
+{
+  "admin_only": {
+    "description": "仅管理员可用",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后只有 AstrBot 管理员和下方白名单用户能让 bot 操控电脑。关闭后任何人都能操控，非常危险。"
+  },
+  "allowed_users": {
+    "description": "额外允许的用户 ID",
+    "type": "list",
+    "default": [],
+    "hint": "不是管理员也允许使用的用户 ID（平台上的发送者 ID）。"
+  },
+  "coord_mode": {
+    "description": "坐标模式",
+    "type": "string",
+    "default": "normalized",
+    "options": ["normalized", "pixel"],
+    "hint": "normalized：千分比坐标（0~1000），适合 Qwen-VL、豆包、Gemini 等模型；pixel：图片像素坐标，适合 GPT、Claude 等模型。"
+  },
+  "max_long_edge": {
+    "description": "截图最长边（像素）",
+    "type": "int",
+    "default": 1280,
+    "hint": "截图会等比缩小到长边不超过这个值，越大越清晰但越费流量和 token。最小 512。"
+  },
+  "image_format": {
+    "description": "截图格式",
+    "type": "string",
+    "default": "jpeg",
+    "options": ["jpeg", "png"],
+    "hint": "jpeg 体积小很多；png 无损，小字更清晰。"
+  },
+  "jpeg_quality": {
+    "description": "JPEG 质量",
+    "type": "int",
+    "default": 80,
+    "hint": "30~95。"
+  },
+  "annotate": {
+    "description": "标注元素编号",
+    "type": "bool",
+    "default": true,
+    "hint": "在截图上给按钮、输入框等可交互元素画框编号，让模型按编号点击，不受分辨率和缩放影响。"
+  },
+  "max_elements": {
+    "description": "最多标注元素数",
+    "type": "int",
+    "default": 120,
+    "hint": "元素太多会让截图变乱，前台窗口的元素优先保留。"
+  },
+  "element_timeout": {
+    "description": "读取元素超时（秒）",
+    "type": "float",
+    "default": 3.0,
+    "hint": "界面特别复杂时只返回超时前读到的元素。"
+  },
+  "default_display": {
+    "description": "默认截图显示器",
+    "type": "int",
+    "default": 0,
+    "hint": "0 = 前台窗口所在显示器，-1 = 全部显示器拼在一起，1、2… = 指定显示器。"
+  },
+  "type_method": {
+    "description": "文字输入方式",
+    "type": "string",
+    "default": "unicode",
+    "options": ["unicode", "paste"],
+    "hint": "unicode：逐字发送，不经过输入法也不占用剪贴板；paste：通过剪贴板粘贴，个别不接受 unicode 输入的程序可以改用这个。"
+  },
+  "screenshot_after_action": {
+    "description": "动作后自动截图",
+    "type": "bool",
+    "default": false,
+    "hint": "开启后点击、输入等动作完成会自动附带一张新截图，减少一轮模型调用，但上下文增长更快。"
+  },
+  "action_delay": {
+    "description": "动作后截图前等待（秒）",
+    "type": "float",
+    "default": 0.6,
+    "hint": "仅在开启动作后自动截图时生效，等界面刷新完再截。"
+  },
+  "blocked_hotkeys": {
+    "description": "禁用的组合键",
+    "type": "list",
+    "default": ["win+l", "ctrl+alt+delete"],
+    "hint": "模型不能按下这些组合键，例如 alt+f4、win+r。"
+  }
+}
