@@ -49,8 +49,9 @@ class ToolOutput:
 
 
 class DesktopSession:
-    def __init__(self, config: PilotConfig) -> None:
+    def __init__(self, config: PilotConfig, tool_prefix: str = "desktop_") -> None:
         self.cfg = config
+        self.prefix = tool_prefix  # 提示文字中引用的工具名前缀
         self._frame: Frame | None = None
         self._frame_seq = 0
         self._elements: list[Element] = []
@@ -93,7 +94,7 @@ class DesktopSession:
             lines.append(f"可交互元素共 {len(found)} 个，操作时优先用编号 label（比坐标更准）：")
             lines.extend(self._format_elements(found))
         elif self.cfg.annotate:
-            lines.append("没有识别到可交互元素（可能是游戏、画布或远程桌面），请用坐标操作，必要时用 desktop_zoom 放大确认。")
+            lines.append(f"没有识别到可交互元素（可能是游戏、画布或远程桌面），请用坐标操作，必要时用 {self.prefix}zoom 放大确认。")
         return self._with_image(image, "\n".join(lines))
 
     def zoom(self, x1: float, y1: float, x2: float, y2: float) -> ToolOutput:
@@ -142,6 +143,61 @@ class DesktopSession:
             input.click(sx, sy)
             time.sleep(0.15)
             parts.append(f"已点击 {target}")
+        self._type_here(text, clear, press_enter)
+        parts.append(f"已输入 {len(text)} 个字符" + ("（先清空了原内容）" if clear else "")
+                     + ("并按下回车" if press_enter else ""))
+        return self._after_action("，".join(parts))
+
+    def multi_click(self, labels: list[int] | None, points: list[list[float]] | None,
+                    hold_ctrl: bool = False) -> ToolOutput:
+        # 先全部解析完再动手，避免中途发现参数错误时只点了一半
+        targets = [self._resolve(label, None, None) for label in labels or []]
+        for point in points or []:
+            if len(point) != 2:
+                raise ValueError(f"坐标 {point} 格式错误，应为 [x, y]")
+            targets.append(self._resolve(None, point[0], point[1]))
+        if not targets:
+            raise ValueError("请提供 labels 或 points")
+        if hold_ctrl:
+            input.key_down("ctrl")
+        try:
+            for sx, sy, _ in targets:
+                input.click(sx, sy)
+                time.sleep(0.08)
+        finally:
+            if hold_ctrl:
+                input.key_up("ctrl")
+        names = "、".join(t[2] for t in targets)
+        return self._after_action(f"已{'按住 Ctrl ' if hold_ctrl else ''}依次点击 {len(targets)} 处：{names}")
+
+    def multi_type(self, items: list[dict], clear: bool = False) -> ToolOutput:
+        resolved = []
+        for item in items:
+            if "text" not in item:
+                raise ValueError(f"{item} 缺少 text")
+            label = item.get("label")
+            sx, sy, target = self._resolve(None if label is None else int(label), item.get("x"), item.get("y"))
+            resolved.append((sx, sy, target, str(item["text"])))
+        if not resolved:
+            raise ValueError("请提供至少一个输入项")
+        for sx, sy, _, text in resolved:
+            input.click(sx, sy)
+            time.sleep(0.15)
+            self._type_here(text, clear, False)
+        done = "；".join(f"{t}：{len(text)} 个字符" for _, _, t, text in resolved)
+        return self._after_action(f"已填写 {len(resolved)} 个输入框{'（先清空了原内容）' if clear else ''}：{done}")
+
+    def clipboard(self, action: str, text: str = "") -> ToolOutput:
+        if action == "get":
+            content = input.get_clipboard_text()
+            return ToolOutput("剪贴板中没有文本" if content is None else f"剪贴板内容：\n{content}")
+        if action == "set":
+            input.set_clipboard_text(text)
+            return ToolOutput(f"已写入剪贴板（{len(text)} 个字符）")
+        raise ValueError("action 只能是 get 或 set")
+
+    def _type_here(self, text: str, clear: bool, press_enter: bool) -> None:
+        """在当前焦点处输入。"""
         if clear:
             input.hotkey(["ctrl", "a"])
             input.hotkey(["delete"])
@@ -152,9 +208,6 @@ class DesktopSession:
                 input.type_unicode(text)
         if press_enter:
             input.hotkey(["enter"])
-        parts.append(f"已输入 {len(text)} 个字符" + ("（先清空了原内容）" if clear else "")
-                     + ("并按下回车" if press_enter else ""))
-        return self._after_action("，".join(parts))
 
     def scroll(self, direction: str, amount: int, label: int | None, x: float | None,
                y: float | None) -> ToolOutput:
@@ -186,7 +239,23 @@ class DesktopSession:
         input.hotkey(keys)
         return self._after_action(f"已按下 {combo}")
 
-    def app(self, action: str, name: str) -> ToolOutput:
+    def app(self, action: str, name: str, x: float | None = None, y: float | None = None,
+            width: float | None = None, height: float | None = None) -> ToolOutput:
+        if action in ("maximize", "minimize", "restore"):
+            win = apps.find_window(name)
+            apps.set_window_state(win.hwnd, action)
+            names = {"maximize": "最大化", "minimize": "最小化", "restore": "还原"}
+            return self._after_action(f"已{names[action]}窗口「{win.title}」")
+        if action == "resize":
+            if None in (x, y, width, height):
+                raise ValueError("resize 需要同时提供 x、y、width、height")
+            frame = self._require_frame()
+            target = frame.sub_region(x, y, x + width, y + height, self.cfg.coord_mode)
+            win = apps.find_window(name)
+            actual = apps.move_window(win.hwnd, target)
+            ax, ay = frame.from_screen(actual.left, actual.top, self.cfg.coord_mode)
+            bx, by = frame.from_screen(actual.right, actual.bottom, self.cfg.coord_mode)
+            return self._after_action(f"已把窗口「{win.title}」调整到 ({ax},{ay})-({bx},{by})")
         if action == "list":
             wins = apps.list_windows()
             if not wins:
@@ -205,7 +274,7 @@ class DesktopSession:
             launched = apps.launch_app(name)
             return self._after_action(f"已启动「{launched}」，应用可能需要几秒加载，可以用 wait_seconds 参数等待后再截图",
                                       delay=max(self.cfg.action_delay, 2.0))
-        raise ValueError("action 只能是 list、switch 或 launch")
+        raise ValueError("action 只能是 list、switch、launch、resize、maximize、minimize 或 restore")
 
     # ---------------- 内部 ----------------
 
@@ -217,13 +286,13 @@ class DesktopSession:
 
     def _require_frame(self) -> Frame:
         if self._frame is None:
-            raise RuntimeError("还没有截图，请先调用 desktop_screenshot 观察屏幕")
+            raise RuntimeError(f"还没有截图，请先调用 {self.prefix}screenshot 观察屏幕")
         return self._frame
 
     def _resolve(self, label: int | None, x: float | None, y: float | None) -> tuple[int, int, str]:
         if label is not None:
             if not self._elements:
-                raise ValueError("当前没有可用的元素编号，请先调用 desktop_screenshot")
+                raise ValueError(f"当前没有可用的元素编号，请先调用 {self.prefix}screenshot")
             if not 1 <= int(label) <= len(self._elements):
                 raise ValueError(f"编号 {label} 不存在，有效范围是 1~{len(self._elements)}")
             el = self._elements[int(label) - 1]
@@ -269,7 +338,7 @@ class DesktopSession:
         if self._elements:
             text += "。界面可能已变化，旧编号仅在界面未变时有效"
         if not self.cfg.screenshot_after_action:
-            return ToolOutput(text + "。需要确认结果时请调用 desktop_screenshot")
+            return ToolOutput(f"{text}。需要确认结果时请调用 {self.prefix}screenshot")
         time.sleep(self.cfg.action_delay if delay is None else delay)
         shot = self.screenshot()
         return ToolOutput(f"{text}。\n\n以下是动作后的新截图：\n{shot.text}", shot.image_b64, shot.mime)

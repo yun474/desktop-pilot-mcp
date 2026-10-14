@@ -1,5 +1,6 @@
 本项目的部分设计与实现参考了 Windows-MCP（https://github.com/CursorTouch/Windows-MCP），
-包括可交互元素的筛选规则、窗口前台切换与开始菜单应用启动方式。其许可证如下：
+包括可交互元素的筛选规则、窗口前台切换与开始菜单应用启动方式、PowerShell 执行时的编码处理与超时处理，
+以及系统工具（PowerShell、文件、注册表、进程、剪贴板、通知、网页抓取、批量操作）的功能范围。其许可证如下：
 
 MIT License
 

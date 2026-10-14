@@ -325,6 +325,55 @@ def switch_window(name: str) -> WindowInfo:
     return _make_info(hwnd, foreground_window())
 
 
+# ---------------------------------------------------------------- 调整窗口
+
+_SW_MAXIMIZE = 3
+_SW_MINIMIZE = 6
+_SWP_NOZORDER = 0x0004
+_SWP_NOACTIVATE = 0x0010
+_user32.IsZoomed.argtypes = [wintypes.HWND]
+_user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
+                                 ctypes.c_int, ctypes.c_int, wintypes.UINT]
+
+
+def find_window(name: str) -> WindowInfo:
+    """按名称匹配窗口；名称为空时取前台窗口。"""
+    windows = list_windows()
+    if not name.strip():
+        for w in windows:
+            if w.is_foreground:
+                return w
+        raise LookupError("当前没有前台窗口，请提供窗口名称")
+    target = _match_window(name, windows)
+    if target is None:
+        candidates = "；".join(f"{w.title}（{w.process_name}）" for w in windows[:20]) or "无"
+        raise LookupError(f"没有找到与「{name}」匹配的窗口。当前窗口：{candidates}")
+    return target
+
+
+def set_window_state(hwnd: int, state: str) -> None:
+    cmd = {"maximize": _SW_MAXIMIZE, "minimize": _SW_MINIMIZE, "restore": _SW_RESTORE}[state]
+    _user32.ShowWindow(hwnd, cmd)
+
+
+def move_window(hwnd: int, target: Rect) -> Rect:
+    """把窗口的可见边框移动到 target（物理像素），返回调整后的实际可见区域。"""
+    if is_minimized(hwnd) or _user32.IsZoomed(hwnd):
+        _user32.ShowWindow(hwnd, _SW_RESTORE)
+        time.sleep(0.15)
+    # Win10/11 窗口四周有透明的缩放边框，SetWindowPos 设置的是含边框的外框，需要补上差值
+    outer = wintypes.RECT()
+    _user32.GetWindowRect(hwnd, ctypes.byref(outer))
+    visible = window_rect(hwnd)
+    dl, dt = visible.left - outer.left, visible.top - outer.top
+    dr, db = outer.right - visible.right, outer.bottom - visible.bottom
+    _user32.SetWindowPos(hwnd, None, target.left - dl, target.top - dt,
+                         target.width + dl + dr, target.height + dt + db,
+                         _SWP_NOZORDER | _SWP_NOACTIVATE)
+    time.sleep(0.1)
+    return window_rect(hwnd)
+
+
 # ---------------------------------------------------------------- 启动应用
 
 

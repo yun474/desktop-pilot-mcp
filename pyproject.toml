@@ -1,0 +1,33 @@
+[project]
+name = "desktop-pilot-mcp"
+version = "2.0.0"
+description = "通过截图操控 Windows 电脑的 MCP 服务器：元素编号点击、自动处理高分屏缩放，附带 PowerShell、文件、注册表等系统工具"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "yun474" }]
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.10,<2",
+    "uvicorn>=0.30",
+    "uiautomation>=2.0.20,<3",
+    "mss>=9.0.0",
+    "pillow>=10.0.0",
+    "psutil>=7.2.2",
+    "markdownify>=1.2.3",
+]
+
+[project.urls]
+Repository = "https://github.com/yun474/desktop-pilot-mcp"
+
+[project.scripts]
+desktop-pilot-mcp = "desktop_pilot_mcp.__main__:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

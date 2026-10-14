@@ -1,0 +1,56 @@
+# Desktop Pilot MCP 配置文件
+# 首次启动时会复制本文件为 config.toml 并自动生成 token，之后修改 config.toml 即可，改完重启生效。
+
+[server]
+# 这台电脑的名字，会作为工具名前缀（例如 laptop -> laptop_screenshot），用来区分多台电脑。
+# 只能包含字母、数字和下划线；留空则不加前缀（只控制一台电脑时可以留空）。
+name = "laptop"
+# 监听地址。0.0.0.0 表示所有网卡（包括 Tailscale），配合 token 使用；
+# 也可以填这台电脑的 Tailscale IP（100.x.x.x），只接受 Tailscale 的连接。
+host = "0.0.0.0"
+port = 8765
+# 访问令牌，客户端需要在请求头中携带 Authorization: Bearer <token>。
+# 监听非本机地址时必须设置，留空会拒绝启动。
+token = ""
+
+[desktop]
+# 坐标模式：normalized = 千分比坐标（0~1000），适合 Qwen-VL、豆包、Gemini；
+#           pixel = 图片像素坐标，适合 GPT、Claude
+coord_mode = "normalized"
+# 截图最长边（像素），越大越清晰但越费 token
+max_long_edge = 1280
+# 截图格式：jpeg 体积小；png 无损，小字更清晰
+image_format = "jpeg"
+jpeg_quality = 80
+# 是否在截图上给可交互元素画框编号
+annotate = true
+# 最多标注的元素数量，前台窗口优先
+max_elements = 120
+# 读取界面元素的超时（秒），复杂界面只返回超时前读到的元素
+element_timeout = 3.0
+# 默认截图显示器：0 = 前台窗口所在显示器，-1 = 全部显示器，1、2… = 指定显示器
+default_display = 0
+# 文字输入方式：unicode = 逐字发送，不经过输入法、不占用剪贴板；paste = 剪贴板粘贴
+type_method = "unicode"
+# 点击、输入等动作后是否自动附带一张新截图（少一轮模型调用，但上下文增长更快）
+screenshot_after_action = false
+# 动作后自动截图前的等待时间（秒）
+action_delay = 0.6
+# 禁止模型按下的组合键
+blocked_hotkeys = ["win+l", "ctrl+alt+delete"]
+
+[tools]
+# 各类工具的开关，改成 false 后该工具不再提供给模型。截图、点击、输入等基础桌面工具始终开启。
+multi = true      # 批量点击、批量输入
+clipboard = true  # 读写剪贴板
+notify = true     # 右下角系统通知
+shell = true      # 执行 PowerShell 命令（等于完全控制这台电脑）
+file = true       # 读写、复制、移动、删除文件（删除会移入回收站）
+registry = true   # 读写注册表
+process = true    # 查看、结束进程
+scrape = true     # 抓取网页正文
+# PowerShell 默认超时（秒）；模型单次调用可以指定更长时间，但不超过 shell_max_timeout
+shell_timeout = 30
+shell_max_timeout = 300
+# 命令输出、文件内容、网页正文等单次返回的最大字符数
+output_limit = 20000

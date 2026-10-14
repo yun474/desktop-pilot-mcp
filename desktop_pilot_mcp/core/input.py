@@ -166,6 +166,14 @@ def _vk_input(vk: int, up: bool) -> INPUT:
     return _key(vk=vk, flags=flags)
 
 
+def key_down(name: str) -> None:
+    _send(_vk_input(key_to_vk(name), False))
+
+
+def key_up(name: str) -> None:
+    _send(_vk_input(key_to_vk(name), True))
+
+
 def hotkey(keys: list[str]) -> None:
     """按顺序按下所有键，再逆序松开。"""
     vks = [key_to_vk(k) for k in keys]

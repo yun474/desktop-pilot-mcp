@@ -2,8 +2,8 @@
 
 import pytest
 
-from core.coords import NORMALIZED, PIXEL, Frame, fit_size
-from core.types import Rect
+from desktop_pilot_mcp.core.coords import NORMALIZED, PIXEL, Frame, fit_size
+from desktop_pilot_mcp.core.types import Rect
 
 # 2560x1600 屏幕缩到 1280x800
 SCREEN = Frame(1, Rect(0, 0, 2560, 1600), 1280, 800)
